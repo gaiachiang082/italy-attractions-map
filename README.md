@@ -2,8 +2,8 @@
 
 ## 資料夾內容
 
-- `index.html` — 主頁（由 `italy_napoli_firenze_attrazioni.html` 複製）
-- `Staticfile` — 告訴 Railway 以靜態網站方式托管（Caddy）
+- `index.html` — 主頁
+- `package.json` — 用 `serve` 在 Railway 的 `$PORT` 上提供靜態檔（較穩定）
 
 ---
 
@@ -83,9 +83,21 @@ railway domain
 
 | 問題 | 處理 |
 |------|------|
-| 打開網址是 404 | 確認 repo 根目錄有 `index.html`，且 **不要** 自訂 Start Command（讓 Railpack 用 Caddy） |
+| 打開網址是 404 | 確認根目錄有 `index.html`；Start Command 應為 `npm start` |
+| 只顯示 Public domain will be generated | 見下方「網域疑難排解」 |
 | 地圖有、照片沒有 | 需能連線 `commons.wikimedia.org`；Railway 上一般沒問題 |
 | 想用自己的網域 | Railway → Settings → Networking → Custom Domain |
+
+---
+
+## 網域疑難排解（只看到 Public domain will be generated）
+
+1. 打開 **Deployments** 分頁，確認最新部署是 **Success / Active**（綠色）。若失敗，點進去看 Build / Deploy 日誌。
+2. **Settings → Networking**：刪除現有網域（垃圾桶圖示），再按一次 **Generate Domain**。
+3. 重新整理頁面；成功後應顯示完整網址，例如  
+   `https://italy-attractions-map-production-xxxx.up.railway.app`
+4. 也可在專案總覽的 Service 卡片上，對外連結有時會直接顯示在這裡。
+5. **Settings → Deploy**：Start Command 設為 `npm start`（或留空讓 `railway.toml` 處理）。
 
 ---
 
