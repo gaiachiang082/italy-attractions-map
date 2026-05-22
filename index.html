@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>義大利中南部精選景點｜那不勒斯 → 佛羅倫斯</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "Segoe UI", "Microsoft JhengHei", "PingFang TC", sans-serif;
+      background: #f0f4f8;
+      color: #1e293b;
+      line-height: 1.55;
+      min-height: 100vh;
+    }
+    header {
+      background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 50%, #3d7ab5 100%);
+      color: #fff;
+      padding: 1.25rem 1.5rem 1.5rem;
+      box-shadow: 0 4px 20px rgba(30, 58, 95, 0.25);
+    }
+    header h1 { font-size: 1.35rem; font-weight: 700; margin-bottom: 0.35rem; }
+    header p { font-size: 0.9rem; opacity: 0.92; max-width: 52rem; }
+    .route-badge {
+      display: inline-block;
+      margin-top: 0.6rem;
+      padding: 0.25rem 0.65rem;
+      background: rgba(255,255,255,0.2);
+      border-radius: 6px;
+      font-size: 0.8rem;
+    }
+    .layout {
+      display: grid;
+      grid-template-columns: 1fr 380px;
+      gap: 0;
+      max-width: 1600px;
+      margin: 0 auto;
+      min-height: calc(100vh - 120px);
+    }
+    @media (max-width: 1024px) {
+      .layout { grid-template-columns: 1fr; }
+      #sidebar { max-height: 420px; order: 2; }
+      #map { min-height: 55vh; order: 1; }
+    }
+    #map {
+      min-height: calc(100vh - 120px);
+      background: #cbd5e1;
+      z-index: 1;
+    }
+    #sidebar {
+      background: #fff;
+      border-left: 1px solid #e2e8f0;
+      overflow-y: auto;
+      max-height: calc(100vh - 120px);
+    }
+    .sidebar-head {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: #f8fafc;
+      padding: 0.85rem 1rem;
+      border-bottom: 1px solid #e2e8f0;
+      font-size: 0.8rem;
+      color: #64748b;
+    }
+    .sidebar-head strong { color: #1e293b; display: block; font-size: 0.95rem; margin-bottom: 0.2rem; }
+    .spot-card {
+      padding: 0.9rem 1rem;
+      border-bottom: 1px solid #f1f5f9;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .spot-card:hover, .spot-card.active {
+      background: #eff6ff;
+    }
+    .spot-card .num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 1.5rem;
+      height: 1.5rem;
+      background: #1e40af;
+      color: #fff;
+      font-size: 0.75rem;
+      font-weight: 700;
+      border-radius: 50%;
+      margin-right: 0.45rem;
+      vertical-align: middle;
+    }
+    .spot-card h3 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #0f172a;
+      display: inline;
+    }
+    .spot-card .region {
+      font-size: 0.72rem;
+      color: #64748b;
+      margin: 0.25rem 0 0.4rem 1.95rem;
+    }
+    .spot-card .thumb {
+      width: 100%;
+      height: 120px;
+      object-fit: cover;
+      border-radius: 8px;
+      margin: 0.5rem 0 0.4rem;
+      border: 1px solid #e2e8f0;
+    }
+    .spot-card .highlight {
+      font-size: 0.8rem;
+      color: #475569;
+      margin-left: 0;
+    }
+    .spot-card .reason {
+      font-size: 0.78rem;
+      color: #64748b;
+      margin-top: 0.35rem;
+      padding-left: 0.5rem;
+      border-left: 3px solid #93c5fd;
+    }
+    .zone-label {
+      padding: 0.5rem 1rem;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #1e40af;
+      background: #dbeafe;
+    }
+    .leaflet-popup-content { margin: 10px 12px; min-width: 220px; }
+    .popup-img {
+      width: 100%;
+      height: 140px;
+      object-fit: cover;
+      border-radius: 6px;
+      margin-bottom: 8px;
+    }
+    .popup-title { font-weight: 700; font-size: 0.95rem; margin-bottom: 4px; }
+    .popup-sub { font-size: 0.75rem; color: #64748b; margin-bottom: 6px; }
+    .popup-text { font-size: 0.8rem; color: #475569; line-height: 1.45; }
+    .legend-panel {
+      position: absolute;
+      bottom: 24px;
+      left: 12px;
+      z-index: 1000;
+      background: rgba(255,255,255,0.95);
+      padding: 10px 14px;
+      border-radius: 10px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.12);
+      font-size: 0.75rem;
+      max-width: 200px;
+    }
+    .legend-panel div { margin: 4px 0; display: flex; align-items: center; gap: 8px; }
+    .legend-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      border: 2px solid #fff;
+      box-shadow: 0 0 0 1px rgba(0,0,0,0.2);
+    }
+    .marker-num {
+      background: #1e40af;
+      color: #fff;
+      font-weight: 700;
+      font-size: 11px;
+      width: 22px;
+      height: 22px;
+      line-height: 22px;
+      text-align: center;
+      border-radius: 50%;
+      border: 2px solid #fff;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.35);
+    }
+    .marker-start { background: #059669; }
+    .marker-end { background: #b45309; }
+    footer.note {
+      grid-column: 1 / -1;
+      padding: 0.75rem 1.25rem;
+      font-size: 0.72rem;
+      color: #64748b;
+      background: #f8fafc;
+      border-top: 1px solid #e2e8f0;
+    }
+    .spot-gallery {
+      position: absolute;
+      left: 12px;
+      right: 12px;
+      bottom: 12px;
+      z-index: 1000;
+      padding-bottom: 28px;
+      display: flex;
+      align-items: stretch;
+      gap: 8px;
+      background: rgba(255,255,255,0.97);
+      border-radius: 12px;
+      box-shadow: 0 4px 24px rgba(15,23,42,0.18);
+      padding: 10px;
+      max-width: 720px;
+    }
+    .gal-nav {
+      flex-shrink: 0;
+      width: 40px;
+      border: none;
+      border-radius: 8px;
+      background: #1e40af;
+      color: #fff;
+      font-size: 1.5rem;
+      line-height: 1;
+      cursor: pointer;
+      align-self: center;
+      height: 56px;
+      transition: background 0.15s, transform 0.1s;
+    }
+    .gal-nav:hover { background: #1e3a8a; }
+    .gal-nav:active { transform: scale(0.96); }
+    .gal-nav:disabled { opacity: 0.35; cursor: default; }
+    .gal-body {
+      flex: 1;
+      min-width: 0;
+      display: grid;
+      grid-template-columns: 200px 1fr;
+      gap: 12px;
+      align-items: center;
+    }
+    @media (max-width: 640px) {
+      .spot-gallery { flex-wrap: wrap; max-width: none; }
+      .gal-body { grid-template-columns: 1fr; width: 100%; }
+      .gal-nav { width: 36px; height: 44px; }
+    }
+    .gal-img-wrap {
+      position: relative;
+      border-radius: 8px;
+      overflow: hidden;
+      background: #e2e8f0;
+      aspect-ratio: 4/3;
+    }
+    .gal-img-wrap img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      transition: opacity 0.25s;
+    }
+    .gal-img-wrap img.is-loading { opacity: 0.4; }
+    .gal-meta { min-width: 0; }
+    .gal-counter {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: #1e40af;
+      letter-spacing: 0.04em;
+    }
+    .gal-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #0f172a;
+      margin: 2px 0 4px;
+      line-height: 1.3;
+    }
+    .gal-sub { font-size: 0.72rem; color: #64748b; margin-bottom: 6px; }
+    .gal-highlight {
+      font-size: 0.78rem;
+      color: #475569;
+      line-height: 1.45;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .gal-dots {
+      position: absolute;
+      bottom: 14px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 5px;
+      z-index: 2;
+    }
+    .gal-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      border: none;
+      padding: 0;
+      background: #cbd5e1;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.15s;
+    }
+    .gal-dot.active { background: #1e40af; transform: scale(1.15); }
+    .gal-dot:hover { background: #93c5fd; }
+    .legend-panel { bottom: 200px; }
+    @media (max-width: 1024px) {
+      .legend-panel { bottom: 24px; }
+      .spot-gallery { position: relative; left: 0; right: 0; bottom: 0; margin: 0 12px 12px; max-width: none; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>🇮🇹 義大利中南部精選景點提案</h1>
+  <p>那不勒斯 → 佛羅倫斯｜沿太陽公路（A1）北返。地圖下方可左右切換 9 個景點照片（← → 或鍵盤方向鍵），點選標記／右側列表也會同步。</p>
+  <span class="route-badge">建議路線方向：南 → 北 · 遊覽車友善</span>
+</header>
+
+<div class="layout">
+  <div id="map-wrap" style="position:relative">
+    <div id="map"></div>
+    <div id="spot-gallery" class="spot-gallery" aria-label="景點照片切換">
+      <button type="button" class="gal-nav gal-prev" aria-label="上一個景點">‹</button>
+      <div class="gal-body">
+        <div class="gal-img-wrap">
+          <img id="gal-img" src="" alt="">
+        </div>
+        <div class="gal-meta">
+          <div class="gal-counter" id="gal-counter">1 / 9</div>
+          <h2 class="gal-title" id="gal-title"></h2>
+          <div class="gal-sub" id="gal-sub"></div>
+          <p class="gal-highlight" id="gal-highlight"></p>
+        </div>
+      </div>
+      <button type="button" class="gal-nav gal-next" aria-label="下一個景點">›</button>
+      <div class="gal-dots" id="gal-dots"></div>
+    </div>
+    <div class="legend-panel">
+      <div><span class="legend-dot" style="background:#059669"></span> 起點 那不勒斯</div>
+      <div><span class="legend-dot" style="background:#1e40af"></span> 精選景點 ①–⑨</div>
+      <div><span class="legend-dot" style="background:#b45309"></span> 終點 佛羅倫斯</div>
+      <div style="margin-top:6px;color:#94a3b8">← → 切換景點照片</div>
+    </div>
+  </div>
+
+  <aside id="sidebar">
+    <div class="sidebar-head">
+      <strong>景點一覽</strong>
+      點選卡片或地圖下方 ← → 切換景點照片
+    </div>
+
+    <div class="zone-label">📍 靠近那不勒斯</div>
+    <article class="spot-card" data-id="1">
+      <span class="num">1</span><h3>卡塞塔王宮 Reggia di Caserta</h3>
+      <div class="region">坎帕尼亞大區 · Campania</div>
+      <img class="thumb" alt="卡塞塔王宮" loading="lazy">
+      <p class="highlight">被譽為「義大利的凡爾賽宮」，奢華宮殿與遼闊幾何水池花園。</p>
+      <p class="reason">遊覽車可直達專屬停車場，園區平坦，另有付費園區車可搭乘。</p>
+    </article>
+    <article class="spot-card" data-id="2">
+      <span class="num">2</span><h3>龐貝古城 Pompeii</h3>
+      <div class="region">坎帕尼亞大區 · Campania</div>
+      <img class="thumb" alt="龐貝古城" loading="lazy">
+      <p class="highlight">火山灰掩埋的傳奇遺跡，歷史課本上的時光膠囊。</p>
+      <p class="reason">超大型遊覽車停車場；可安排外圍拍照或入口平坦短程參觀。</p>
+    </article>
+
+    <div class="zone-label">📍 那不勒斯與羅馬之間 · 拉齊奧</div>
+    <article class="spot-card" data-id="3">
+      <span class="num">3</span><h3>卡西諾山修道院 Montecassino</h3>
+      <div class="region">拉齊奧大區 · Lazio</div>
+      <img class="thumb" alt="卡西諾山修道院" loading="lazy">
+      <p class="highlight">山頂宏偉修道院，二戰著名戰役地，宗教氛圍濃厚、視野極佳。</p>
+      <p class="reason">道路寬敞，遊覽車可開至山頂停車場，下車即達。</p>
+    </article>
+    <article class="spot-card" data-id="4">
+      <span class="num">4</span><h3>蒂沃利千泉宮 Tivoli · Villa d'Este</h3>
+      <div class="region">拉齊奧大區 · Lazio</div>
+      <img class="thumb" alt="千泉宮" loading="lazy">
+      <p class="highlight">世界文化遺產，數百座文藝復興噴泉，綠意盎然、夏日消暑。</p>
+      <p class="reason">遊覽車外圍停靠；園內可選無障礙坡道緩步賞泉。</p>
+    </article>
+
+    <div class="zone-label">📍 翁布里亞 · 中義心臟</div>
+    <article class="spot-card" data-id="5">
+      <span class="num">5</span><h3>奧爾維耶托 Orvieto</h3>
+      <div class="region">翁布里亞大區 · Umbria</div>
+      <img class="thumb" alt="奧爾維耶托" loading="lazy">
+      <p class="highlight">凝灰岩懸崖上的絕美山城，華麗大教堂與寧靜古巷。</p>
+      <p class="reason">山下大型停車場，纜車或電扶梯輕鬆上山城，適合晚餐與夕陽。</p>
+    </article>
+    <article class="spot-card" data-id="6">
+      <span class="num">6</span><h3>阿西西 Assisi</h3>
+      <div class="region">翁布里亞大區 · Umbria</div>
+      <img class="thumb" alt="阿西西" loading="lazy">
+      <p class="highlight">聖方濟各故鄉，神聖祥和，山城建築保存極完好。</p>
+      <p class="reason">天主教聖地，停車場至聖堂間設大型電扶梯直達古城核心。</p>
+    </article>
+
+    <div class="zone-label">📍 托斯卡尼 · 靠近佛羅倫斯</div>
+    <article class="spot-card" data-id="7">
+      <span class="num">7</span><h3>皮恩扎與奧爾恰谷 Pienza & Val d'Orcia</h3>
+      <div class="region">托斯卡尼大區 · Toscana</div>
+      <img class="thumb" alt="皮恩扎" loading="lazy">
+      <p class="highlight">托斯卡尼明信片風景：絲柏樹、起伏丘陵與麥田。</p>
+      <p class="reason">車上即可賞景；小鎮迷你平坦，可品嚐著名羊奶起司。</p>
+    </article>
+    <article class="spot-card" data-id="8">
+      <span class="num">8</span><h3>錫耶納 Siena</h3>
+      <div class="region">托斯卡尼大區 · Toscana</div>
+      <img class="thumb" alt="錫耶納" loading="lazy">
+      <p class="highlight">中世紀大城，扇形田野廣場與黑白條紋大教堂。</p>
+      <p class="reason">遊覽車停城牆外，電扶梯系統免爬坡進古城。</p>
+    </article>
+    <article class="spot-card" data-id="9">
+      <span class="num">9</span><h3>阿雷佐 Arezzo</h3>
+      <div class="region">托斯卡尼大區 · Toscana</div>
+      <img class="thumb" alt="阿雷佐" loading="lazy">
+      <p class="highlight">《美麗人生》拍攝地，傾斜大廣場，觀光客少、氛圍悠閒。</p>
+      <p class="reason">好停靠，上下城電扶梯連接，距佛羅倫斯近，適合最後一晚休息。</p>
+    </article>
+  </aside>
+
+  <footer class="note">
+    地圖底圖 © OpenStreetMap 貢獻者 · 景點照片來源 Wikimedia Commons（自由授權）· 座標供行程規劃參考
+  </footer>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script>
+/** Wikimedia Commons — Special:Redirect/file/ 穩定格式 */
+function commonsImg(file, width = 640) {
+  return `https://commons.wikimedia.org/wiki/Special:Redirect/file/${encodeURIComponent(file)}?width=${width}`;
+}
+
+const SPOTS = [
+  { id: 1, name: "卡塞塔王宮", en: "Reggia di Caserta", region: "Campania",
+    lat: 41.0731, lng: 14.3264,
+    // 原 Reggia_di_Caserta_-_Verso_il_Vesuvio.jpg 已不存在，改用同景點有效檔名
+    file: "Reggia_di_Caserta_2023.jpg",
+    highlight: "義大利的凡爾賽宮：奢華宮殿與遼闊幾何水池花園。",
+    reason: "遊覽車直達停車場，園區平坦，可搭付費園區車。" },
+  { id: 2, name: "龐貝古城", en: "Pompeii", region: "Campania",
+    lat: 40.7484, lng: 14.4897,
+    file: "Forum_(Pompeii).jpg",
+    highlight: "火山灰掩埋的傳奇遺跡。",
+    reason: "大型遊覽車停車場；外圍拍照或入口短程參觀即可。" },
+  { id: 3, name: "卡西諾山修道院", en: "Montecassino", region: "Lazio",
+    lat: 41.4900, lng: 13.8140,
+    file: "Abbazia_di_Montecassino.jpg",
+    highlight: "山頂宏偉修道院，宗教寧靜，視野極佳。",
+    reason: "遊覽車可開至山頂停車場，下車即達。" },
+  { id: 4, name: "蒂沃利千泉宮", en: "Villa d'Este, Tivoli", region: "Lazio",
+    lat: 41.9633, lng: 12.7958,
+    file: "Tivoli_Villa_dEste_29.jpg",
+    highlight: "世界遺產，數百座文藝復興噴泉。",
+    reason: "外圍停靠，可走平緩無障礙坡道賞泉。" },
+  { id: 5, name: "奧爾維耶托", en: "Orvieto", region: "Umbria",
+    lat: 42.7184, lng: 12.1107,
+    file: "Orvieto_Cathedral.jpg",
+    highlight: "懸崖山城，華麗大教堂，適合晚餐與夕陽。",
+    reason: "山下停車，纜車或電扶梯上山城。" },
+  { id: 6, name: "阿西西", en: "Assisi", region: "Umbria",
+    lat: 43.0708, lng: 12.6196,
+    file: "BasilicaDiSanFrancescoAssisiMar262024_02.jpg",
+    highlight: "聖方濟各故鄉，神聖祥和的古城。",
+    reason: "大型電扶梯直達古城與聖堂核心。" },
+  { id: 7, name: "皮恩扎 · 奧爾恰谷", en: "Pienza & Val d'Orcia", region: "Toscana",
+    lat: 43.0770, lng: 11.6786,
+    file: "Val_d'orcia_-pienza.JPG",
+    highlight: "絲柏樹與丘陵的托斯卡尼明信片風景。",
+    reason: "車上賞景；小鎮平坦，可品羊奶起司。" },
+  { id: 8, name: "錫耶納", en: "Siena", region: "Toscana",
+    lat: 43.3188, lng: 11.3308,
+    file: "Piazza_del_Campo_Siena.jpg",
+    highlight: "田野廣場與黑白條紋大教堂。",
+    reason: "城牆外停車，電扶梯免爬坡進城。" },
+  { id: 9, name: "阿雷佐", en: "Arezzo", region: "Toscana",
+    lat: 43.4633, lng: 11.8799,
+    file: "Piazza_Grande_Arezzo.JPG",
+    highlight: "《美麗人生》拍攝地，悠閒傾斜大廣場。",
+    reason: "好停靠，電扶梯連上下城，近佛羅倫斯。" }
+];
+
+/* 自訂照片：在 SPOTS 該景點加上 img: "https://你的圖片網址.jpg" 即可覆蓋 Wikimedia */
+function spotImg(spot, width = 640) {
+  return spot.img || commonsImg(spot.file, width);
+}
+
+SPOTS.forEach(spot => {
+  const card = document.querySelector(`.spot-card[data-id="${spot.id}"]`);
+  if (!card) return;
+  const img = card.querySelector("img.thumb");
+  if (img) img.src = spotImg(spot, 320);
+});
+
+const NAPOLI = { lat: 40.8518, lng: 14.2681, name: "那不勒斯 Napoli" };
+const FIRENZE = { lat: 43.7696, lng: 11.2558, name: "佛羅倫斯 Firenze" };
+
+const map = L.map("map", { scrollWheelZoom: true }).setView([42.2, 12.8], 7);
+const markers = {};
+
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+  maxZoom: 18
+}).addTo(map);
+
+const routeCoords = [
+  [NAPOLI.lat, NAPOLI.lng],
+  ...SPOTS.map(s => [s.lat, s.lng]),
+  [FIRENZE.lat, FIRENZE.lng]
+];
+
+L.polyline(routeCoords, {
+  color: "#3b82f6",
+  weight: 3,
+  opacity: 0.55,
+  dashArray: "10, 8"
+}).addTo(map);
+
+function numIcon(n, cls) {
+  return L.divIcon({
+    className: "",
+    html: `<div class="marker-num ${cls || ""}">${n}</div>`,
+    iconSize: [22, 22],
+    iconAnchor: [11, 11]
+  });
+}
+
+L.marker([NAPOLI.lat, NAPOLI.lng], { icon: numIcon("起", "marker-start") })
+  .addTo(map)
+  .bindPopup(`<div class="popup-title">${NAPOLI.name}</div><div class="popup-text">行程起點</div>`);
+
+L.marker([FIRENZE.lat, FIRENZE.lng], { icon: numIcon("終", "marker-end") })
+  .addTo(map)
+  .bindPopup(`<div class="popup-title">${FIRENZE.name}</div><div class="popup-text">行程終點</div>`);
+
+SPOTS.forEach((spot, i) => {
+  const popup = `
+    <img class="popup-img" src="${spotImg(spot, 480)}" alt="${spot.name}" loading="lazy">
+    <div class="popup-title">${spot.id}. ${spot.name}</div>
+    <div class="popup-sub">${spot.en} · ${spot.region}</div>
+    <div class="popup-text"><strong>亮點：</strong>${spot.highlight}<br><br><strong>推薦：</strong>${spot.reason}</div>
+    <p style="font-size:0.7rem;color:#94a3b8;margin-top:6px">使用下方 ← → 切換其他景點</p>
+  `;
+  const m = L.marker([spot.lat, spot.lng], { icon: numIcon(spot.id) })
+    .addTo(map)
+    .bindPopup(popup, { maxWidth: 280 });
+  m.on("click", () => showSpot(i));
+  markers[spot.id] = m;
+});
+
+const bounds = L.latLngBounds(routeCoords);
+map.fitBounds(bounds.pad(0.08));
+
+let currentIdx = 0;
+const galImg = document.getElementById("gal-img");
+const galCounter = document.getElementById("gal-counter");
+const galTitle = document.getElementById("gal-title");
+const galSub = document.getElementById("gal-sub");
+const galHighlight = document.getElementById("gal-highlight");
+const galDots = document.getElementById("gal-dots");
+
+SPOTS.forEach((spot, i) => {
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "gal-dot" + (i === 0 ? " active" : "");
+  btn.setAttribute("aria-label", `景點 ${spot.id} ${spot.name}`);
+  btn.addEventListener("click", () => showSpot(i));
+  galDots.appendChild(btn);
+});
+
+function showSpot(index) {
+  const n = SPOTS.length;
+  currentIdx = ((index % n) + n) % n;
+  const spot = SPOTS[currentIdx];
+
+  galImg.classList.add("is-loading");
+  galImg.onload = () => galImg.classList.remove("is-loading");
+  galImg.src = spotImg(spot, 800);
+  galImg.alt = spot.name;
+  galCounter.textContent = `${spot.id} / ${n}`;
+  galTitle.textContent = `${spot.id}. ${spot.name}`;
+  galSub.textContent = `${spot.en} · ${spot.region}`;
+  galHighlight.textContent = spot.highlight;
+
+  galDots.querySelectorAll(".gal-dot").forEach((d, i) => {
+    d.classList.toggle("active", i === currentIdx);
+  });
+
+  document.querySelectorAll(".spot-card").forEach(card => {
+    card.classList.toggle("active", +card.dataset.id === spot.id);
+  });
+
+  const activeCard = document.querySelector(`.spot-card[data-id="${spot.id}"]`);
+  if (activeCard) activeCard.scrollIntoView({ block: "nearest", behavior: "smooth" });
+
+  map.setView([spot.lat, spot.lng], 11, { animate: true });
+  if (markers[spot.id]) markers[spot.id].openPopup();
+}
+
+document.querySelector(".gal-prev").addEventListener("click", () => showSpot(currentIdx - 1));
+document.querySelector(".gal-next").addEventListener("click", () => showSpot(currentIdx + 1));
+
+document.addEventListener("keydown", (e) => {
+  if (e.key === "ArrowLeft") { e.preventDefault(); showSpot(currentIdx - 1); }
+  if (e.key === "ArrowRight") { e.preventDefault(); showSpot(currentIdx + 1); }
+});
+
+document.querySelectorAll(".spot-card").forEach(card => {
+  card.addEventListener("click", () => {
+    const idx = SPOTS.findIndex(s => s.id === +card.dataset.id);
+    if (idx >= 0) showSpot(idx);
+  });
+});
+
+/* 觸控左右滑動切換 */
+let touchStartX = 0;
+const gallery = document.getElementById("spot-gallery");
+gallery.addEventListener("touchstart", e => { touchStartX = e.changedTouches[0].screenX; }, { passive: true });
+gallery.addEventListener("touchend", e => {
+  const dx = e.changedTouches[0].screenX - touchStartX;
+  if (Math.abs(dx) > 50) showSpot(currentIdx + (dx < 0 ? 1 : -1));
+}, { passive: true });
+
+showSpot(0);
+</script>
+</body>
+</html>
